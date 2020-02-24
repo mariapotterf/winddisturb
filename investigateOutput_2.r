@@ -11,6 +11,7 @@
 
 # 1 – wind occurrence in 2066 
 # 2 – wind occurrence in 2046 & 2081 
+# 3 - wind occurrence in 2046, 2066 & 2091
 
 # 2020/02/23 - new data with updates BA and Volume: "rslt_withoutCC_WIND_V2_all.csv"
 
@@ -29,14 +30,15 @@ library(rgdal)
 # Set working directory
 setwd("U:/projects/2019_windthrowModel/Janita/outSimulated")
 
-df.wind <- read.csv("rslt_withoutCC_WIND_V2_all.csv", sep = ";")  #   rslt_withoutCC_WIND_all.csv
+df.wind <- read.csv("rslt_withoutCC_WIND_V2_all.csv", sep = ";")  #  previous: rslt_withoutCC_WIND_all.csv
+
+#df.wind <- read.csv("rslt_withoutCC_WIND_all.csv", sep = ";")  
 df.no.w <- read.csv("rsl_without_MV_Korsnas.csv", sep = ";")  # without == climate change is not included
 
 
 # Read all stands geometry:
 stands.all = readOGR(dsn = getwd(),
                     layer = "MV_Korsnas")
-
 
 # Get the standid of uqinue stands:
 # subset the shapefiles - only 10 stands
@@ -85,14 +87,26 @@ unique(df.wind$gpkg)
 
 length(unique(df.wind$gpkg))
 
-# There are 3 regimes of wind: what does this mean???
-
-
 
 
 # Add the new columns to the no wind scenario
 df.no.w$Carb_flux_nat_wd_nrg <- NA
 df.no.w$Carbon_flux_natural_rm_wind <- NA
+
+
+# Seems that there are differences in input data???
+# ==================================================
+length(unique(df.no.w$id))
+length(unique(df.no.w$AREA ))
+nrow(df.no.w)
+
+
+
+# geometry stands.all has 302 unique stands
+# but df.no.w has only 297, and only 275 unique AREA????
+
+
+
 
 
 
@@ -137,15 +151,17 @@ df.wind.bau <- subset(df, regime == "BAU")
 df.wind.sa <- subset(df, regime == "SA")
 
 
-# Data contains the 4 wind scenarios and 22 management regimes for 10 stands
-
 
 # Understand how do the wind and no wind scenarios differ between in BA, volume etc??
 # ---------------------
 windows()
 
-my.theme = theme(axis.text.x = element_text(angle = 90)) + 
-  theme_bw()
+addLines = geom_vline(xintercept = c(wind.yrs), linetype="dotted", 
+                      color = "grey", size=1) 
+
+my.theme = 
+  theme(axis.text.x = element_text(angle = 90)) + 
+  theme_light()
 
 ggplot(subset(df.wind.bau, id == "12469490"), 
        aes(x = year,
@@ -153,11 +169,12 @@ ggplot(subset(df.wind.bau, id == "12469490"),
            color = windFreq,
            group = windFreq)) +                 # check BA = basal area???
    geom_line() +               # the lines overlap each other: have the same BA under two wind regimes
+  addLines +
   my.theme
 
 
 # Indicate years of windthrows:   
-wind.yrs = c(2066, 2046, 2081)
+wind.yrs = c(2046, 2066, 2081, 2091)
 
 
 
@@ -167,9 +184,24 @@ ggplot(subset(df.wind.sa, id == "12469490"),
            color = windFreq,
            group = windFreq)) +                 # check BA = basal area???
   geom_line() +               # the lines overlap each other: have the same BA under two wind regimes
-  geom_vline(xintercept = c(wind.yrs), linetype="dotted", 
-             color = "grey", size=1) +
+  addLines +
   my.theme
+
+
+
+ggplot(subset(df.wind.sa, id == "12469490"), 
+       aes(x = year,
+           y = Age,
+           color = windFreq,
+           group = windFreq)) +                 # check BA = basal area???
+  geom_line() +               # the lines overlap each other: have the same BA under two wind regimes
+  addLines +
+  my.theme
+
+
+
+
+
 
 # very little differences between the wind scenarios, but there are some
 ggplot(df.wind.bau, 
@@ -179,19 +211,20 @@ ggplot(df.wind.bau,
            group = windFreq)) +                 # check BA = basal area???
   geom_line() +
   facet_grid(.~id) +
+  addLines +
   my.theme
 
 
 # maybe larger differences between individual management regimes??
-ggplot(subset(df, id == "12469490" & regime == "SA"),  # df 
+ggplot(subset(df, id == "12469490" & regime == "BAU"),  # df 
        aes(x = year,
-           y = BA,
+           y = Age,
            color = windFreq,
            group = windFreq)) +                 # check BA = basal area???
   geom_line() +
   geom_vline(xintercept = c(wind.yrs), linetype="dotted", 
              color = "grey", size=1) +
-  facet_grid(regime~id) +
+  facet_grid(windFreq~id) +
   my.theme
 
 
@@ -207,6 +240,17 @@ subset(df, year == 2016 & regime == "SA" & id == "12469490")
 # The aga has multiple parameters!!!  # stand 12469488 has the same BA values, will it have the same age??
 subset(df, year == 2016 & regime == "SA" & id == "12469488")    
 
+
+# =============================
+# Check 
+# =============================
+# 
+
+# Are the differences between noWind and Wind in Age, BA, V,... consistent between two wind input data?
+# -   YES, why NoWind and Wind input data differs??
+
+# why the BRANCH description is missing??
+# -  seems to miss from both NO wind and Wind??
 
 
 unique(df$branch)
@@ -226,7 +270,7 @@ length(unique(df.current$BA))
 # no differences
 
 # check age:
-ggplot(df.wind, 
+ggplot(df, 
        aes(x = year,
            y = Age,
            color = windFreq,
@@ -250,7 +294,7 @@ regimes.sub <- c("SA", "BAU", "CCF_3") # , "BAUwGTR", "BAUwoT"
 
 ggplot(subset(df, regime %in% regimes.sub), 
        aes(x = year,
-           y = Carb_flux_nat_wd_nrg,
+           y = Age, # 
            color = windFreq,
            group = windFreq)) +                 
   geom_line() +
