@@ -1,0 +1,194 @@
+---
+title: "Analyze Pori under wind scenarios"
+author: "majca"
+date: "February 26, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+require(knitr)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list = ls())
+
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(rgdal)
+library(ggpubr)
+
+
+# Set working directory in knitr way:
+opts_knit$set(root.dir = 'U:/projects/2019_windthrowModel/Janita/outSimulated')
+
+```
+
+## Investigate the windtrows outputs
+
+
+- create plots of stand structure behaviour over years 
+- in total 10 stands
+- investigate the wind and no wind scenarios: 
+- subset the standid from the no wind scenarios - 
+- likely have different number of columns  
+
+### Wind happened: 
+
+- 1 – wind occurrence in 2066 
+- 2 – wind occurrence in 2046 & 2081 
+- 3 - wind occurrence in 2046, 2066 & 2091
+
+2020/02/23 - new data with updates BA and Volume: "rslt_withoutCC_WIND_V2_all.csv"
+2020/02/26 - new data for Pori
+
+
+```{r cars, message=FALSE, results = FALSE}
+
+# 2020/02/26 - Pori dataset
+df.wind <- read.csv("rslt_withoutCC_WIND_Pori_all.csv",  sep = ";") 
+df.no.w <- read.csv( "rsl_without_MV_Pori.csv", sep = ";") 
+
+```
+
+## Investigate the data
+
+```{r pressure, message=FALSE, results = FALSE}
+# Check what columns are different??
+setdiff(names(df.wind), names(df.no.w))
+
+#[1] "Carb_flux_nat_wd_nrg"        "Carbon_flux_natural_rm_wind"
+
+
+# Differences in regimes?? comare a & b, b & a - lead to different elements
+setdiff(unique(df.no.w$regime), unique(df.wind$regime))
+
+setdiff(unique(df.wind$regime), unique(df.no.w$regime))
+
+
+# CHeck the number of wind scenarios:
+unique(df.wind$gpkg)
+
+# "SA_DWextract"
+length(unique(df.wind$gpkg))
+# "SA"
+
+# Add the new columns to the no wind scenario
+df.no.w$Carb_flux_nat_wd_nrg <- NA
+df.no.w$Carbon_flux_natural_rm_wind <- NA
+
+
+```
+### Restructure both tables to merge them
+
+
+```{r,  message=FALSE, results = FALSE}
+
+# Add indication of wind regime to NO wind and 2x wind scenario
+df.wind.out <-
+  df.wind %>% 
+  separate(gpkg, c("gpkg", "windFreq"), "i_") %>% # !!!!! because multiple _ _  was used in the name, need restructre the string back!!
+  mutate(gpkg = replace(gpkg, gpkg == "MV_Por", "MV_Pori")) 
+
+
+# Subset the same stands from the no wind scenario
+sub.df.no.w <- subset(df.no.w, id %in% unique(df.wind.out$id))
+
+#ad the noWind factor to NO wind scenario
+sub.df.no.w$windFreq <- "noWind"
+
+
+# Reorder the dataframe columns into the same order
+sub.df.no.w <- sub.df.no.w[names(df.wind.out)]
+
+
+# Change the sub.df.no.w "SA_DWextract" to "SA"
+sub.df.no.w$regime <- plyr::revalue(sub.df.no.w$regime, c("SA_DWextract"="SA"))
+```
+
+### Merge dataframes together 
+
+```{r, message=FALSE, results = FALSE}
+df<- rbind(sub.df.no.w, df.wind.out)  # SA and SA_DWextract are merged together!!!
+
+df$id<- as.factor(df$id)
+
+```
+
+## Plot all data together to find if there are unexpected results:
+
+``` {r}
+
+my.theme = 
+  theme(axis.text.x = element_text(angle = 90)) + 
+  theme(panel.background = element_rect(fill = "white", colour = "black"), 
+        axis.line = element_line(colour = "black"))
+
+
+
+# panel.grid.major = element_blank()
+ggplot(df, 
+       aes(x = year,
+           y = H_dom,
+           color = id,
+           group = id)) +                 
+  geom_line() +               
+  facet_grid(~ windFreq) +
+  my.theme
+```
+
+Seems that in all wind scenarios, the dominant tree height is unrealistic. In waht management regimes and in what wind scenarios the tree height overpass 35 m, which is limit in SIMO?
+
+```{r}
+# # Subset in which stands and sccenarios the H_dom is more than 35??
+# -----------------------------------
+df.H.over <-subset(df, H_dom > 35)
+
+
+```
+
+
+## Identify problematic regimes & stands 
+
+When the tree height overpasses 35 m?? 
+
+- *Regimes* are: `r unique(df.H.over$regime) `
+
+- *Wind scenarios* are: `r unique(df.H.over$windFreq) `
+
+- Problematic *stands* are: `r unique(df.H.over$id)`
+
+
+### Dominat tree height in CCFs
+
+```{r}
+ggplot(subset(df, windFreq != "noWind" & regime %in% c("CCF_1", "CCF_2", "CCF_3", "CCF_4") ),  # & 
+       aes(x = year,
+           y = H_dom ,
+           color = id,
+           group = id)) +                 
+  geom_line() +               
+  facet_grid(regime ~ windFreq) +
+  #addLines +
+  my.theme
+```
+
+
+### Volume in CCFs scenarios
+
+Volume increasis with increasing wind frequency???
+
+```{r}
+
+ggplot(subset(df, windFreq != "noWind" & regime %in% c("CCF_1", "CCF_2", "CCF_3", "CCF_4") ),  # & 
+       aes(x = year,
+           y = V, #H_dom ,#V_total_deadwood,#BA,
+           color = id,
+           group = id)) +                 
+  geom_line() +               
+  facet_grid(regime ~ windFreq) +
+  #addLines +
+  my.theme
+```
+

@@ -1,7 +1,7 @@
 
 
-# Investigate the windtjrows outputs
-# create polots of stand structure behaviour over years 
+# Investigate the windtrows outputs
+# create plots of stand structure behaviour over years 
 # in total 10 stands
 # investigate the wind and no wind scenarios: 
 # subset the standid from the no wind scenarios - 
@@ -66,24 +66,17 @@ df.no.w <- read.csv( "rsl_without_MV_Pori.csv", sep = ";")
 # Get to know the datasets:
 
 # How many stands are there?
-unique(df.wind$id)  # 207 stands
-unique(df.no.w$id)  # 297 stands
+unique(df.wind$id)  # 10 stands
+unique(df.no.w$id)  # 207 stands
 
 # How many managament regimes?
 unique(df.wind$regime)  # 22
 unique(df.no.w$regime)  # 22
 
-# [1] SA         BAUwoT_m20 CCF_1      CCF_2      BAU_m5     CCF_3      BAU       
-# [8] BAUwGTR    BAUwoT     CCF_4      BAU_5      BAU_10     BAUwoT_10  BAU_15    
-# [15] BAU_30     BAUwT      BAUwT_GTR  BAUwT_m5   BAUwT_5    BAUwT_10   BAUwT_15  
-# [22] BAUwT_30  
+# !!!! there is SA and "SA_DWextract" regimes!! now I will consider them as same regime
 
-dim(df.wind)
-dim(df.no.w)
-
-
-range(df.wind$year)  # 2016-2011: 95 yrs
-range(df.no.w$year)  # 2016-2011: 95 yrs
+range(df.wind$year)  # 2016-2111: 95 yrs
+range(df.no.w$year)  # 2016-2111: 95 yrs
 
 # Check what columns are different??
 setdiff(names(df.wind), names(df.no.w))
@@ -91,20 +84,21 @@ setdiff(names(df.wind), names(df.no.w))
 #[1] "Carb_flux_nat_wd_nrg"        "Carbon_flux_natural_rm_wind"
 
 
-# Differences in regimes??
+# Differences in regimes?? comare a & b, b & a - lead to different elements
 setdiff(unique(df.no.w$regime), unique(df.wind$regime))
 
+setdiff(unique(df.wind$regime), unique(df.no.w$regime))
 
 # CHeck the number of wind scenarios:
 unique(df.wind$gpkg)
 
+# "SA_DWextract"
 length(unique(df.wind$gpkg))
-
+# "SA"
 
 # Add the new columns to the no wind scenario
 df.no.w$Carb_flux_nat_wd_nrg <- NA
 df.no.w$Carbon_flux_natural_rm_wind <- NA
-
 
 
 # Add indication of wind regime to NO wind and 2x wind scenario
@@ -120,9 +114,13 @@ sub.df.no.w <- subset(df.no.w, id %in% unique(df.wind.out$id))
 #ad the noWind factor to NO wind scenario
 sub.df.no.w$windFreq <- "noWind"
 
+
 # Reorder the dataframe columns into the same order
 sub.df.no.w <- sub.df.no.w[names(df.wind.out)]
 
+
+# Change the sub.df.no.w "SA_DWextract" to "SA"
+sub.df.no.w$regime <- plyr::revalue(sub.df.no.w$regime, c("SA_DWextract"="SA"))
 
 
 # Check how many regimes are by every stand id???
@@ -137,6 +135,7 @@ table(sub.df.no.w$id, sub.df.no.w$regime)
 # --------------------------
 df<- rbind(sub.df.no.w, df.wind.out)  # SA and SA_DWextract are merged together!!!
 
+df$id<- as.factor(df$id)
 
 
 
@@ -150,6 +149,42 @@ df.sa <- subset(df, regime == "SA")
 # Understand how do the wind and no wind scenarios differ between in BA, volume etc??
 # ---------------------
 windows()
+
+my.theme = 
+  theme(axis.text.x = element_text(angle = 90)) + 
+  #theme_light() +
+  theme(# panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white", colour = "black"), 
+    axis.line = element_line(colour = "black"))
+
+
+# Investigate whole dataset:
+
+# panel.grid.major = element_blank()
+ggplot(df, 
+       aes(x = year,
+           y = H_dom,
+           color = id,
+           group = id)) +                 # check BA = basal area???
+  geom_line() +               # the lines overlap each other: have the same BA under two wind regimes
+  
+  facet_grid(~ windFreq) +
+  #addLines +
+  my.theme
+
+
+
+
+# # Subset in which stands and sccenarios the H_dom is more than 35??
+# -----------------------------------
+df.H.over <-subset(df, H_dom > 35)
+
+unique(df.H.over$regime)    #  CCF_3 CCF_1 CCF_2
+unique(df.H.over$windFreq)  #  "Wind_2" "Wind_3"
+unique(df.H.over$id) 
+
+
+
 
 # Indicate years of windthrows:   
 wind.yrs = c(2046, 2066, 2081, 2091)
@@ -170,11 +205,38 @@ my.theme =
 ggplot(df.bau, 
        aes(x = year,
            y = V_total_deadwood,#BA,
-           color = windFreq,
-           group = windFreq)) +                 # check BA = basal area???
+           color = id,
+           group = id)) +                 # check BA = basal area???
   geom_line() +               # the lines overlap each other: have the same BA under two wind regimes
-  addLines +
+  
   facet_grid(~ windFreq) +
+  #addLines +
+  my.theme
+
+
+ggplot(df.ccf1, 
+       aes(x = year,
+           y = H_dom ,#V_total_deadwood,#BA,
+           color = id,
+           group = id)) +                 
+  geom_line() +               
+  facet_grid(~ windFreq) +
+  #addLines +
+  my.theme
+
+
+
+
+
+
+ggplot(subset(df, windFreq != "noWind" & regime %in% c("CCF_2", "CCF_3", "CCF_4") ),  # & 
+       aes(x = year,
+           y = H_dom ,#V_total_deadwood,#BA,
+           color = id,
+           group = id)) +                 
+  geom_line() +               
+  facet_grid(regime ~ windFreq) +
+  #addLines +
   my.theme
 
 
@@ -183,7 +245,88 @@ ggplot(df.bau,
 
 
 
-ggplot(subset(df.bau, id == "12469490"), 
+
+# Check the H_dom
+ggplot(subset(df, windFreq != "noWind" & regime %in% c("CCF_1", "CCF_2", "CCF_3", "CCF_4") ),  # & 
+       aes(x = year,
+           y = H_dom ,
+           color = id,
+           group = id)) +                 
+  geom_line() +               
+  facet_grid(regime ~ windFreq) +
+  #addLines +
+  my.theme
+
+
+
+# Volume
+ggplot(subset(df, windFreq != "noWind" & regime %in% c("CCF_2", "CCF_3", "CCF_4") ),  # & 
+       aes(x = year,
+           y = V, #H_dom ,#V_total_deadwood,#BA,
+           color = id,
+           group = id)) +                 
+  geom_line() +               
+  facet_grid(regime ~ windFreq) +
+  #addLines +
+  my.theme
+
+
+
+# Check the BA
+ggplot(subset(df, windFreq != "noWind" & regime %in% c("CCF_1", "CCF_2", "CCF_3", "CCF_4") ),  # & 
+       aes(x = year,
+           y = BA ,
+           color = id,
+           group = id)) +                 
+  geom_line() +               
+  facet_grid(regime ~ windFreq) +
+  #addLines +
+  my.theme
+
+
+
+
+
+ggplot(subset(df, windFreq != "noWind" & regime %in% c("CCF_1", "CCF_2", "CCF_3", "CCF_4") ),  # & 
+       aes(x = year,
+           y = V, #H_dom ,#V_total_deadwood,#BA,
+           color = id,
+           group = id)) +                 
+  geom_line() +               
+  facet_grid(regime ~ windFreq) +
+  #addLines +
+  my.theme
+
+
+
+
+
+
+
+
+
+
+ggplot(subset(df, regime %in% regimes.sub), 
+       aes(x = year,
+           y = V, #H_dom ,#V_total_deadwood,#BA,
+           color = id,
+           group = id)) +                 
+  geom_line() +               
+  facet_grid(regime ~ windFreq) +
+  #addLines +
+  my.theme
+
+
+
+
+# Subset problematic stand number:
+# Korsnas:
+# my.wrong.stand = "12469490"
+
+# Pori: 
+my.wrong.stand = "24472254"
+
+ggplot(subset(df.bau, id == my.wrong.stand), 
        aes(x = year,
            y = V_total_deadwood,#BA,
            color = windFreq,
@@ -194,7 +337,7 @@ ggplot(subset(df.bau, id == "12469490"),
 
 
 
-ggplot(subset(df.sa, id == "12469490"), 
+ggplot(subset(df.sa, id == my.wrong.stand), 
        aes(x = year,
            y = BA,
            color = windFreq,
@@ -207,7 +350,7 @@ ggplot(subset(df.sa, id == "12469490"),
 
 # Total Deadwood
 # V_total_deadwood
-ggplot(subset(df.sa, id == "12469490"), 
+ggplot(subset(df.sa, id == my.wrong.stand), 
        aes(x = year,
            y = V_total_deadwood,
            color = windFreq,
@@ -218,7 +361,7 @@ ggplot(subset(df.sa, id == "12469490"),
 
 
 windows()
-ggplot(subset(df.sa, id == "12469490"), 
+ggplot(subset(df.sa, id == my.wrong.stand), 
        aes(x = year,
            y = Age,
            color = windFreq,
@@ -261,7 +404,7 @@ ggplot(df.ccf1,
 
 
 # maybe larger differences between individual management regimes??
-ggplot(subset(df, id == "12469490" & regime == "BAU"),  # df 
+ggplot(subset(df, id == my.wrong.stand & regime == "BAU"),  # df 
        aes(x = year,
            y = V_total_deadwood,
            color = windFreq,
@@ -273,13 +416,9 @@ ggplot(subset(df, id == "12469490" & regime == "BAU"),  # df
   my.theme
 
 
-
-# Create 4 plots to export
-
-
-
 # --------------------------------------
-
+#     Create 4 plots to export
+# --------------------------------------
 
 # H, V, deadwood, carbon
 sa<- ggplot(subset(df, id == "12469152" & regime == "SA"),  # df 
@@ -346,27 +485,6 @@ ggarrange(sa, H_dom_CCF, volume, carb,
 
 
 
-# It seems that BA differs between the regimes at first year???
-df.current<- subset(df, year == 2016 & regime == "SA", 
-                    select = c("id", "gpkg", "BA", "V", "Carbon_flux_natural_rm_wind", "windFreq", "regime", "AREA"))
-
-
-# the stands 12469490, 12469491, 12469563 has different BA, V in noWind and wind scenarios. Why?? Heck other parametes, 
-# maybe just the colums were switched??
-subset(df, year == 2016 & regime == "SA" & id == "12469490")
-
-# The aga has multiple parameters!!!  # stand 12469488 has the same BA values, will it have the same age??
-subset(df, year == 2016 & regime == "SA" & id == "12469488")    
-
-
-
-
-# CHeck the values of BA, V by wind regime??
-df.current %>% 
-  arrange(id)
-
-length(unique(df.current$BA))
-
 # no differences
 
 # check age:
@@ -386,22 +504,11 @@ ggplot(df,
 # ==========================================
 
 
-# CHeck tommorow!!
-
-#df %>% 
-#  group_by(id, regime) #%>% 
- # dplyr::mutate(V.lag = round(V - lag(V = 0),2))
-# mutate does not work
-
-
-
 # subset by vector of management regimes:
 unique(df$regime)
 
-
-
 regimes.sub <- c("SA", "BAU", "CCF_1", "BAUwGTR") # , "BAUwGTR", "BAUwoT"
-
+regimes.cc <- c("BAU", "CCF_1", "CCF_2", "CCF_3", "CCF_4")
 
 
 ggplot(subset(df, regime %in% regimes.sub), 
@@ -414,7 +521,7 @@ ggplot(subset(df, regime %in% regimes.sub),
   my.theme
 
 
-windows()
+
 ggplot(subset(df, regime %in% regimes.sub), 
        aes(x = year,
            y = V_total_deadwood, #CARBON_STORAGE,#Biomass,#V_total_deadwood, #H_dom, #D_gm, #H_dom, #BA, #V_total_deadwood, # 
@@ -425,12 +532,10 @@ ggplot(subset(df, regime %in% regimes.sub),
   my.theme
 
 
-# having strange output, very linear; however changes at indicated dates
 
-
-ggplot(df.wind, 
+ggplot(subset(df, regime %in% regimes.sub), 
        aes(x = year,
-           y = Carbon_flux_natural_rm_wind,
+           y = H_dom, #D_gm, #BA,  
            color = windFreq,
            group = windFreq)) +                 
   geom_line() +
@@ -438,16 +543,50 @@ ggplot(df.wind,
   my.theme
 
 
+
+ggplot(subset(df, regime %in% regimes.sub), 
+       aes(x = year,
+           y = D_gm, #BA, #V_total_deadwood, # 
+           color = windFreq,
+           group = windFreq)) +                 
+  geom_line() +
+  facet_grid(regime~id) +
+  my.theme
+
+
+
+
+# =================================
+# Try subset only CCF regimes:
+# =================================
+
+
+ggplot(subset(df, regime %in% regimes.cc ), 
+       aes(x = year,
+           y = H_dom, #D_gm, #BA,  
+           color = windFreq,
+           group = windFreq)) +                 
+  geom_line() +
+  facet_grid(regime~id) +
+  my.theme
+
+
+
+
+
+
+
+# --------------------------------------------------
 # Check the initial stand age:
 
-ggplot(subset(df, year == 2016),  
+ggplot(subset(df, year == min(df$year)),  
        aes(x = Age)) +
   geom_histogram() + facet_grid(.~id)
 
 
-ggplot(subset(df, year == 2111),  
+ggplot(subset(df, year == max(df$year) & regime %in% regimes.sub),  
        aes(x = Age)) +
-  geom_histogram() + facet_grid(.~id)
+  geom_histogram() + facet_grid(regime~id)
 
 
 # CHeck the age by stands and classes:
