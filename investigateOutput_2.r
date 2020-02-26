@@ -14,6 +14,7 @@
 # 3 - wind occurrence in 2046, 2066 & 2091
 
 # 2020/02/23 - new data with updates BA and Volume: "rslt_withoutCC_WIND_V2_all.csv"
+# 2020/02/26 - new data for Pori
 
 # ---------------------
 
@@ -25,39 +26,47 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(rgdal)
+library(ggpubr)
 
 
 # Set working directory
 setwd("U:/projects/2019_windthrowModel/Janita/outSimulated")
 
-df.wind <- read.csv("rslt_withoutCC_WIND_V2_all.csv", sep = ";")  #  previous: rslt_withoutCC_WIND_all.csv
 
 #df.wind <- read.csv("rslt_withoutCC_WIND_all.csv", sep = ";")  
 #df.no.w <- read.csv("rsl_without_MV_Korsnas.csv", sep = ";")  # without == climate change is not included
-df.no.w <- read.csv("rslt_withoutnoWind_rsu_kyle_all.csv", sep = ";")  # without == climate change is not included
+
+#df.wind <- read.csv("rslt_withoutCC_WIND_V2_all.csv", sep = ";")  #  previous: rslt_withoutCC_WIND_all.csv
+#df.no.w <- read.csv("rslt_withoutnoWind_rsu_kyle_all.csv", sep = ";")  # without == climate change is not included
+
+
+# 2020/02/26 - Pori dataset
+df.wind <- read.csv("rslt_withoutCC_WIND_Pori_all.csv",  sep = ";") 
+df.no.w <- read.csv( "rsl_without_MV_Pori.csv", sep = ";") 
+
 
 # Read all stands geometry:
-stands.all = readOGR(dsn = getwd(),
-                    layer = "MV_Korsnas")
+#stands.all = readOGR(dsn = getwd(),
+ #                   layer = "MV_Korsnas")
 
 # Get the standid of uqinue stands:
 # subset the shapefiles - only 10 stands
-stands.wind <- unique(df.wind$id)
+#stands.wind <- unique(df.wind$id)
 
 
 # Subset only geometry selected stands
-stands10 <- subset(stands.all, standid %in% stands.wind )
+# stands10 <- subset(stands.all, standid %in% stands.wind )
 
 
 # Plot stand geometry
-windows()
-plot(stands.all)
-plot(stands10, add = T, col = "red")
+#windows()
+#plot(stands.all)
+#plot(stands10, add = T, col = "red")
 
 # Get to know the datasets:
 
 # How many stands are there?
-unique(df.wind$id)  # 10 stands
+unique(df.wind$id)  # 207 stands
 unique(df.no.w$id)  # 297 stands
 
 # How many managament regimes?
@@ -82,11 +91,14 @@ setdiff(names(df.wind), names(df.no.w))
 #[1] "Carb_flux_nat_wd_nrg"        "Carbon_flux_natural_rm_wind"
 
 
+# Differences in regimes??
+setdiff(unique(df.no.w$regime), unique(df.wind$regime))
+
+
 # CHeck the number of wind scenarios:
 unique(df.wind$gpkg)
 
 length(unique(df.wind$gpkg))
-
 
 
 # Add the new columns to the no wind scenario
@@ -94,36 +106,18 @@ df.no.w$Carb_flux_nat_wd_nrg <- NA
 df.no.w$Carbon_flux_natural_rm_wind <- NA
 
 
-# Seems that there are differences in input data???
-# ==================================================
-length(unique(df.no.w$id))
-length(unique(df.no.w$AREA ))
-nrow(df.no.w)
-
-
-
-# geometry stands.all has 302 unique stands
-# but df.no.w has only 297, and only 275 unique AREA????
-
-
-
-
-
-
-# subset the stands from whole Korsnas dataset (no wind scenario)
-sub.df.no.w <-
-  df.no.w %>% 
-  filter(id %in% stands.wind) 
-
-
 
 # Add indication of wind regime to NO wind and 2x wind scenario
 df.wind.out <-
   df.wind %>% 
-  separate(gpkg, c("gpkg", "windFreq"), "s_") %>% # !!!!! because multiple _ _  was used in the name, need restructre the string back!!
-  mutate(gpkg = replace(gpkg, gpkg == "MV_Korsna", "MV_Korsnas")) 
+  separate(gpkg, c("gpkg", "windFreq"), "i_") %>% # !!!!! because multiple _ _  was used in the name, need restructre the string back!!
+  mutate(gpkg = replace(gpkg, gpkg == "MV_Por", "MV_Pori")) 
 
-# ad the noWind factor to NO wind scenario
+
+# Subset the same stands from the no wind scenario
+sub.df.no.w <- subset(df.no.w, id %in% unique(df.wind.out$id))
+
+#ad the noWind factor to NO wind scenario
 sub.df.no.w$windFreq <- "noWind"
 
 # Reorder the dataframe columns into the same order
@@ -135,19 +129,20 @@ sub.df.no.w <- sub.df.no.w[names(df.wind.out)]
 # i.e. execuletd by eaevry stand???
 table(df.wind.out$id, df.wind.out$regime)
 
-
+table(sub.df.no.w$id, sub.df.no.w$regime)
 
 
 
 # Merge dataframes together 
 # --------------------------
-df<- rbind(sub.df.no.w, df.wind.out)
+df<- rbind(sub.df.no.w, df.wind.out)  # SA and SA_DWextract are merged together!!!
 
-str(df)
+
 
 
 # Subset data only for BAU
 df.bau <- subset(df, regime == "BAU")
+df.ccf1 <- subset(df, regime == "CCF_1")
 df.sa <- subset(df, regime == "SA")
 
 
@@ -172,6 +167,21 @@ my.theme =
         axis.line = element_line(colour = "black"))
   
 # panel.grid.major = element_blank()
+ggplot(df.bau, 
+       aes(x = year,
+           y = V_total_deadwood,#BA,
+           color = windFreq,
+           group = windFreq)) +                 # check BA = basal area???
+  geom_line() +               # the lines overlap each other: have the same BA under two wind regimes
+  addLines +
+  facet_grid(~ windFreq) +
+  my.theme
+
+
+
+
+
+
 
 ggplot(subset(df.bau, id == "12469490"), 
        aes(x = year,
@@ -230,8 +240,24 @@ ggplot(df.bau,
            group = windFreq)) +                 # check BA = basal area???
   geom_line() +
   facet_grid(windFreq~id) +
-  addLines +
+  #addLines #+
   my.theme
+
+
+
+ggplot(df.ccf1, 
+       aes(x = year,
+           y = BA,
+           color = windFreq,
+           group = windFreq)) +                 # check BA = basal area???
+  geom_line() +
+  facet_grid(windFreq~id) +
+  #addLines #+
+  my.theme
+
+
+
+
 
 
 # maybe larger differences between individual management regimes??
@@ -249,7 +275,7 @@ ggplot(subset(df, id == "12469490" & regime == "BAU"),  # df
 
 
 # Create 4 plots to export
-library(ggpubr)
+
 
 
 # --------------------------------------
