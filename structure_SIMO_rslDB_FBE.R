@@ -125,12 +125,10 @@ create_table_UNIT <- 'Create Table UNIT AS SELECT u.*,
 
 ##### For each "db_names", defined in main.R ...
 
-
-
 for (name in db_names){
   
   # DEfine the connection
-  db_names_path = paste(inputFolder, paste0(name, "_rsu.db"), sep = "/")
+  db_names_path = paste(inputFolder, paste0(name, ".db"), sep = "/")
   con <- dbConnect(dbDriver("SQLite"), dbname = db_names_path)
   
   # If the following tables already exist, for which the query is defined, remove them
@@ -163,39 +161,5 @@ rm(create_table_max_v, create_table_OPERS2, create_table_OPERS3, create_table_UN
 
 
 
-
-# # First extraction of wind simulated Korsnas data for MSc
-# 
-# sim_variant <- "without_SA"
-# db_names <- c("MV_Korsnas_Wind_1") #  , "MV_Korsnas_Wind_2", "rsu_example2"
-#
-# 
-# 
-# for (name in db_names){
-#   # Connect to the database
-#   con <- dbConnect(dbDriver("SQLite"), dbname = paste0(path,"input_data/simulated_", sim_variant,"_" ,name , "_rsu.db"))
-#   # con <- dbConnect(dbDriver("SQLite"), dbname = paste0(path,"input_data/test/simulated_", sim_variant,"_" ,name , ".db"))
-#   
-#   # If the following tables already exist, for which the query is defined, remove them
-#   tab_to_delete <- c("OPERS2", "OPERS3", "max_v", "UNIT")
-#   
-#   for(i in tab_to_delete){
-#     if(dbExistsTable(con, i)) {dbRemoveTable(con, i)}
-#   }
-#   
-#   # Run the Queries and create the final table "UNIT", 
-#   # which contains the development of all stands and indicators under the simulated management regimes 
-#   query_to_run <- c(create_table_max_v, create_table_OPERS2, create_table_OPERS3, create_table_UNIT)
-#   
-#   for(i in query_to_run){
-#     dbExecute(con, i)
-#   }
-#   
-#   dbDisconnect(con)
-#   
-#   rm(query_to_run, tab_to_delete, con)
-# }
-# 
-# rm(create_table_max_v, create_table_OPERS2, create_table_OPERS3, create_table_UNIT)
 
 

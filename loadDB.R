@@ -31,57 +31,27 @@ error_stands <- read.csv(paste0(path, "params/errors_watersheds.csv"),
 error_stands$id <- as.character(error_stands$id)
 
 
-for (name in db_names){
-  
-  
-  # Define connection path
-  db_names_path = paste(inputFolder, paste0(name, "_rsu.db"), sep = "/")
-  con <- dbConnect(dbDriver("SQLite"), dbname = db_names_path)
-  
-  # Create query
-  rsl  <- dbGetQuery( con, paste0("select ", columns, " from UNIT"))
-  rsl$gpkg <- name
-  dbDisconnect(con)
-  
-  ### Add the abbreviation of the regimes
-  rsl <- rsl %>% 
-    left_join(regime, by = "branching_group", all.x = TRUE)
-  
-  
-  rsl <- rsl %>%
-    anti_join(error_stands, by = c("id", "gpkg"))
-  
-  
-  ### Rename set aside scenario if it considers deadwood extraction
-  if(sim_variant %in% c("CC45", "CC85", "without")) {
-    
-   rsl <- rsl %>% mutate(regime = ifelse(regime %in% "SA", "SA_DWextract", regime))
-    
-  }
-  
-  outcsvName = paste0("rsl_", name, ".csv")
-  write.table(rsl, paste(outputFolder, outcsvName, sep = "/"), sep = ";", row.names = F, col.names = TRUE)
-  
-  assign( paste("rsl", name, sep="_"), rsl) # unclear role of this??
-  
-}
 
-
-# Variant 2: create one huge dataframe combining all SQL databases (selected columns of table UNIT)
+# create one huge dataframe combining all SQL databases (selected columns of table UNIT)
 # Different DBs are indicated by an additional column "test"
 
 rslt <- NULL
 
 for (name in db_names){
-   
+   print(name)
   # Define connection path
-  db_names_path = paste(inputFolder, paste0(name, "_rsu.db"), sep = "/")
+  db_names_path = paste(inputFolder, paste0(name, ".db"), sep = "/")
   con <- dbConnect(dbDriver("SQLite"), dbname = db_names_path)
   
   # Define query
   rsl  <- dbGetQuery( con, paste0("select ", columns, " from UNIT"))
+
+  # Add indication of the processed package
   rsl$gpkg <- name
+  
+  # Disconnect the connection
   dbDisconnect(con)
+  
   rslt <- rbind(rslt, rsl)
   
 }  
@@ -102,10 +72,10 @@ if(sim_variant %in% c("CC45", "CC85", "without")) {
 rslt <- rslt %>%
   anti_join(error_stands, by = c("id", "gpkg"))
 
+
+
 ### write table
-#write.table(rslt, paste0(path, "output/rslt_", sim_variant, "_all.csv" ), sep = ";", row.names = F, col.names = TRUE)
-outcsvName = paste0("rsl_",sim_variant, "_all", ".csv")
-write.table(rsl, paste(outputFolder, outcsvName, sep = "/"), sep = ";", row.names = F, col.names = TRUE)
+write.table(rslt, paste(outputFolder, outcsvName, sep = "/"), sep = ";", row.names = F, col.names = TRUE)
 
 
 

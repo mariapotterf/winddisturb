@@ -56,7 +56,7 @@ create_table_UNIT <-    'Create Table UNIT AS SELECT u.*,(select max(stratum.H_d
 for (name in db_names){
   
   # Create connection 
-  db_names_path = paste(inputFolder, paste0(name, "_rsu.db"), sep = "/")
+  db_names_path = paste(inputFolder, paste0(name, ".db"), sep = "/")
   con <- dbConnect(dbDriver("SQLite"), dbname = db_names_path)
   
   # If the following tables already exist, for which the query is defined, remove them
