@@ -116,8 +116,8 @@ df.no.w$Carbon_flux_natural_rm_wind <- NA
 # Add indication of wind regime to NO wind and 2x wind scenario
 df.wind.out <-
   df.wind %>% 
-  separate(gpkg, c("gpkg", "windFreq"), "i_") %>% # !!!!! because multiple _ _  was used in the name, need restructre the string back!!
-  mutate(gpkg = replace(gpkg, gpkg == "MV_Por", "MV_Pori")) 
+  separate(gpkg, c("gpkg", "windFreq"), "s_") %>% # !!!!! because multiple _ _  was used in the name, need restructre the string back!!
+  mutate(gpkg = replace(gpkg, gpkg == "MV_Korsna", "MV_Korsnas")) 
 
 
 # Subset the same stands from the no wind scenario
@@ -154,7 +154,7 @@ df$id<- as.factor(df$id)
 # Subset data only for BAU
 df.bau <- subset(df, regime == "BAU")
 df.ccf1 <- subset(df, regime == "CCF_1")
-df.sa <- subset(df, regime == "SA")
+df.sa <- subset(df, regime == "SA_DWextract")
 
 
 
@@ -168,6 +168,16 @@ my.theme =
   theme(# panel.grid.minor = element_blank(),
     panel.background = element_rect(fill = "white", colour = "black"), 
     axis.line = element_line(colour = "black"))
+
+
+# Indicate years of windthrows:   
+wind.yrs = c(2046, 2066, 2081, 2091)
+
+addLines = geom_vline(xintercept = c(wind.yrs), 
+                      linetype="dashed", 
+                      color = c("grey","green4", "turquoise3", "purple"),
+                      size=0.7) 
+
 
 
 # Investigate whole dataset:
@@ -185,45 +195,76 @@ ggplot(df,
   my.theme
 
 
+my.stand = "12469142" #   "12469153" 
 
-
-# # Subset in which stands and sccenarios the H_dom is more than 35??
-# -----------------------------------
-df.H.over <-subset(df, H_dom > 35)
-
-unique(df.H.over$regime)    #  CCF_3 CCF_1 CCF_2
-unique(df.H.over$windFreq)  #  "Wind_2" "Wind_3"
-unique(df.H.over$id) 
-
-
-
-
-# Indicate years of windthrows:   
-wind.yrs = c(2046, 2066, 2081, 2091)
-
-addLines = geom_vline(xintercept = c(wind.yrs), 
-                      linetype="dashed", 
-                      color = c("grey","green4", "turquoise3", "purple"),
-                      size=0.7) 
-
-my.theme = 
-  theme(axis.text.x = element_text(angle = 90)) + 
-  #theme_light() +
-  theme(# panel.grid.minor = element_blank(),
-        panel.background = element_rect(fill = "white", colour = "black"), 
-        axis.line = element_line(colour = "black"))
-  
 # panel.grid.major = element_blank()
-ggplot(df.bau, 
+ggplot(subset(df.ccf1, id == my.stand), 
        aes(x = year,
-           y = V_total_deadwood,#BA,
+           y = V, #BA,#V_total_deadwood,#BA,
            color = id,
            group = id)) +                 # check BA = basal area???
   geom_line() +               # the lines overlap each other: have the same BA under two wind regimes
-  
+  geom_vline(xintercept = c(wind.yrs), 
+             linetype="dashed", 
+             #color = c("grey","green4", "turquoise3", "purple"),
+             size=0.7) +
   facet_grid(~ windFreq) +
-  #addLines +
   my.theme
+
+
+
+
+
+
+# panel.grid.major = element_blank()
+ggplot(subset(df.sa, id == my.stand), 
+       aes(x = year,
+           y = H_dom, # V, #BA,#V_total_deadwood,#BA,
+           color = id,
+           group = id)) +                 # check BA = basal area???
+  geom_line() +               # the lines overlap each other: have the same BA under two wind regimes
+  geom_vline(xintercept = c(wind.yrs), 
+             linetype="dashed", 
+             #color = c("grey","green4", "turquoise3", "purple"),
+             size=0.7) +
+  facet_grid(~ windFreq) +
+  my.theme
+
+
+
+
+
+
+
+
+
+
+
+ggplot(subset(df.ccf1, id == my.stand), 
+       aes(x = year,
+           y = V, #BA,#V_total_deadwood,#BA,
+           color = windFreq,
+           group = windFreq)) +                 # check BA = basal area???
+  geom_line() +               # the lines overlap each other: have the same BA under two wind regimes
+  geom_vline(xintercept = c(wind.yrs), 
+             linetype="dashed", 
+             #color = c("grey","green4", "turquoise3", "purple"),
+             size=0.7) +
+  facet_grid(~ windFreq) +
+  my.theme
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ggplot(df.ccf1, 
@@ -239,8 +280,6 @@ ggplot(df.ccf1,
 
 
 
-
-
 ggplot(subset(df, windFreq != "noWind" & regime %in% c("CCF_2", "CCF_3", "CCF_4") ),  # & 
        aes(x = year,
            y = H_dom ,#V_total_deadwood,#BA,
@@ -250,9 +289,6 @@ ggplot(subset(df, windFreq != "noWind" & regime %in% c("CCF_2", "CCF_3", "CCF_4"
   facet_grid(regime ~ windFreq) +
   #addLines +
   my.theme
-
-
-
 
 
 
@@ -525,7 +561,7 @@ regimes.cc <- c("BAU", "CCF_1", "CCF_2", "CCF_3", "CCF_4")
 
 ggplot(subset(df, regime %in% regimes.sub), 
        aes(x = year,
-           y = Carbon_flux_natural_rm_wind, #Harvested_V,#N, #V, #BA, #V_total_deadwood, # 
+           y = Harvested_V, #Carbon_flux_natural_rm_wind, #,#N, #V, #BA, #V_total_deadwood, # 
            color = windFreq,
            group = windFreq)) +                 
   geom_line() +
