@@ -1,9 +1,9 @@
-#####
+############################################
 #
 # Load SIMO simulated output .db and create .csv files for further analysis
 # 2020-02-27
 #
-#####
+#######################################
 
 
 
@@ -33,8 +33,10 @@ library(dplyr)
 path <- paste0(getwd(),"/")
 
 # this allows to store the input databases outsie of project
-inputFolder = "U:/projects/2019_windthrowModel/Janita/input/20200306_wind"   
-outputFolder = "U:/projects/2019_windthrowModel/Janita/input/20200306_wind"  
+#inputFolder = "U:/projects/2019_windthrowModel/Janita/input/20200306_wind"   
+#outputFolder = "U:/projects/2019_windthrowModel/Janita/input/20200306_wind"  
+inputFolder = "U:/projects/2019_windthrowModel/wind_1_cPouta"
+outputFolder = inputFolder
 
 
 ### SDEfine the parameters to be loaded
@@ -65,13 +67,18 @@ db_names <- gsub(".db", "", db_names)
 
 db_names
 
-### Load parameter
-# Management regimes and their abbreviation, they are merged to the data by the branching group (script loadDB.R)
-regime <- read.csv(paste0(path, "params/regimes.csv"), sep = ",", stringsAsFactors = FALSE)
+### Load parameters
+# Management regimes and their abbreviation, 
+# they are merged to the data by the branching group 
+# (script loadDB.R)
+regime <- read.csv(paste0(path, "params/regimes.csv"), 
+                   sep = ",", 
+                   stringsAsFactors = FALSE)
 
 
 ### Restructure the SQL database. 
 # The query creates a table called UNIT, which contains indicators over time and under management regimes
+# UNIT is stored in individual databases
 
 # If one of the follwing simulation variants is read ...
 if(sim_variant %in% c("CC45", "CC85", "without")) {
@@ -91,8 +98,9 @@ if(sim_variant %in% c("CC45", "CC85", "without")) {
 
 
 ### Import the restructured SIMO data (from UNIT table) in the R-environment
-# It gives a single dataframe for each database named by "rsl_db_names.csv" AND an overall dataframe called "rslt_all.csv"
-# Select columns that should be importat from the SQL table UNIT (created before by script structure_SIMO_rslDB)
+# It gives a single dataframe for each database named by "rsl_db_names.csv" AND 
+# an overall dataframe called "rslt_all.csv"
+# Select columns that should be important from the SQL table UNIT (created before by script structure_SIMO_rslDB)
 # An overview on all available SIMO outcomes can be found under: params/Overview_outcomes_SIMO.xlsx
 
 columns <-  paste0("id,
